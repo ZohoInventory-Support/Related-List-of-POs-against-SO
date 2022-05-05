@@ -1,0 +1,44 @@
+
+soid = salesorder.get("salesorder_id");
+orgid = organization.get("organization_id");
+dc = organization.get("data_center_extension");
+det = invokeurl
+[
+	url :"https://inventory.zoho" + dc + "/api/v1/salesorders/" + soid + "/comments?organization_id=" + orgid
+	type :GET
+	connection:"zom"
+];
+com = det.get("comments");
+pol = list();
+listData = List();
+headerData = List();
+headerData.add({"key":"purchaseorder_number","value":"PO Number"});
+headerData.add({"key":"purchaseorder_date","value":"PO Date"});
+headerData.add({"key":"vendor_name","value":"Vendor Name"});
+headerData.add({"key":"billstatus","value":"Bill Status"});
+for each  c in com
+{
+	if(c.get("transaction_type").contains("purchaseorder"))
+	{
+		id = c.get("transaction_id");
+		details = Map();
+		if(!c.get("transaction_id").isNull())
+		{
+			podet = invokeurl
+			[
+				url :"https://inventory.zoho" + dc + "/api/v1/purchaseorders/" + id + "?organization_id=" + orgid
+				type :GET
+				connection:"zom"
+			];
+			details.put("purchaseorder_number",{"value":podet.get("purchaseorder").get("purchaseorder_number"),"link":"https://inventory.zoho" + dc + "/app#/purchaseorders/" + c.get("transaction_id")});
+			details.put("vendor_name",{"value":podet.get("purchaseorder").get("vendor_name"),"link":"https://inventory.zoho" + dc + "/app#/vendors/" + podet.get("purchaseorder").get("vendor_id")});
+			details.put("billstatus",{"value":podet.get("purchaseorder").get("billed_status")});
+			details.put("purchaseorder_date",{"value":podet.get("purchaseorder").get("date").toString("dd-MMM-yy")});
+			listData.add(details);
+		}
+	}
+}
+resultMap = Map();
+resultMap.put("header_context",headerData);
+resultMap.put("data",listData);
+return resultMap;
